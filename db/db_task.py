@@ -1,37 +1,49 @@
 from sqlalchemy.orm import Session
-from db.models import DbTask
+from db.models import Task
 from schemas import TaskBase
+from fastapi import HTTPException
 
-def create_task(db:Session, request:TaskBase):
-    new_task = DbTask(
-        id=request.id,
+def create_task(db: Session, request: TaskBase):
+    # Ensure due_date is a valid Python date object
+    new_task = Task(
         title=request.title,
         description=request.description,
-        completed=request.completed
+        completed=request.completed,
+        due_date=request.due_date  # Use the default date format (YYYY-MM-DD)
     )
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
     return new_task
 
-def get_all_tasks(db:Session):
-    return db.query(DbTask).all()
+def get_all_tasks(db: Session):
+    tasks = db.query(Task).all()
+    if not tasks:
+        raise HTTPException(status_code=404, detail="No Tasks Found.")
+    return tasks
 
-def get_task(db:Session, id:int):
-    return db.query(DbTask).filter(DbTask.id == id).first()
+def get_task(db: Session, task_id: int):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task With ID {task_id} Not Found.")
+    return task
 
-def update_task(db:Session, id:int, request:TaskBase):
-    task = db.query(DbTask).filter(DbTask.id == id)
-    task.update({
-        'title': request.title,
-        'description': request.description,
-        'completed': request.completed
-    })
+def update_task(db: Session, task_id: int, request: TaskBase):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task with ID {task_id} Not Found.")
+    task.title = request.title
+    task.description = request.description
+    task.completed = request.completed
+    task.due_date = request.due_date  # Use the default date format (YYYY-MM-DD)
     db.commit()
-    return 'Task Updated'
+    db.refresh(task)
+    return task
 
-def delete_task(db:Session, id:int):
-    task = db.query(DbTask).filter(DbTask.id == id)
-    task.delete(synchronize_session=False)
+def delete_task(db: Session, task_id: int):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task with ID {task_id} Not Found.")
+    db.delete(task)
     db.commit()
-    return 'Task Deleted'
+    return {"detail": f"Task with ID {task_id} Deleted Successfully."}
