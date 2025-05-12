@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, func, Date
+from sqlalchemy import Column, Integer, String, Boolean, func, Date, DateTime
 from db.database import Base
 
 class Task(Base):
@@ -9,3 +9,5 @@ class Task(Base):
     description = Column(String)
     completed = Column(Boolean, default=False)
     due_date = Column(Date)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
